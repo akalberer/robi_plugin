@@ -7,6 +7,7 @@
 #include <gazebo/common/PID.hh>
 #include <gazebo/physics/JointController.hh>
 #include <gazebo/physics/physics.hh>
+#include <string>
 
 namespace gazebo
 {
@@ -14,7 +15,9 @@ namespace gazebo
 	class RobiPlugin : public ModelPlugin
 	{
     		/// \brief Constructor
-    		public: RobiPlugin() {}
+    		public: RobiPlugin() {
+			const std::string left_wheel_name = "robi_model::robi::left_wheel_hinge";
+		}
 	
 	    	/// \brief The load function is called by Gazebo when the plugin is
 	    	/// inserted into simulation
@@ -38,24 +41,36 @@ namespace gazebo
 			this->model = _model;
 
   			// Get the first joint. We are making an assumption about the model
-  			// having one joint that is the rotational joint.
-  			this->joint = _model->GetJoints()[0];
+			// that left is always first
+
+			
+  			this->joint_left = _model->GetJoints()[0];
+			this->joint_right = _model->GetJoints()[1];
 
   			// Setup a P-controller, with a gain of 0.1.
-  			this->pid = common::PID(0.1, 0, 0);
+  			this->pid_left = common::PID(0.1, 0, 0);
+  			this->pid_right = common::PID(0.1, 0, 0);
 
   			// Apply the P-controller to the joint.
-  			this->model->GetJointController()->SetVelocityPID(this->joint->GetScopedName(), this->pid);
+  			this->model->GetJointController()->SetVelocityPID(this->joint_left->GetScopedName(), this->pid_left);
+			this->model->GetJointController()->SetVelocityPID(this->joint_right->GetScopedName(), this->pid_right);
 
   			// Set the joint's target velocity. This target velocity is just
   			// for demonstration purposes.
-			std::cerr << "name joint: " << this->joint->GetScopedName() << std::endl;
-  			this->model->GetJointController()->SetVelocityTarget(this->joint->GetScopedName(), 10.0);
+			std::cerr << "name joint: " << this->joint_left->GetScopedName() << std::endl;
+			//if(!this->joint_left->GetScopedName().compare(left_wheel_name)){
+				//std::cerr << "left found\n";
+			//}
+  			this->model->GetJointController()->SetVelocityTarget(this->joint_left->GetScopedName(), 10.0);
+			this->model->GetJointController()->SetVelocityTarget(this->joint_right->GetScopedName(), 10.0);
     		}
 
 		private: physics::ModelPtr model;
-		private: physics::JointPtr joint;
-		private: common::PID pid;
+		private: physics::JointPtr joint_left;
+		private: common::PID pid_left;
+		private: physics::JointPtr joint_right;
+		private: common::PID pid_right;
+		public: static const std::string left_wheel_name;
   	};
 
   	// Tell Gazebo about this plugin, so that Gazebo can call Load on this plugin.
