@@ -44,8 +44,8 @@ namespace gazebo
 			// that left is always first
 
 			
-  			this->joint_left = _model->GetJoints()[0];
-			this->joint_right = _model->GetJoints()[1];
+  			this->joint_left = _model->GetJoint("robi_model::robi::left_wheel_hinge");
+			this->joint_right = _model->GetJoint("robi_model::robi::right_wheel_hinge");
 
   			// Setup a P-controller, with a gain of 0.1.
   			this->pid_left = common::PID(0.1, 0, 0);
@@ -62,7 +62,7 @@ namespace gazebo
 				//std::cerr << "left found\n";
 			//}
   			this->model->GetJointController()->SetVelocityTarget(this->joint_left->GetScopedName(), 10.0);
-			this->model->GetJointController()->SetVelocityTarget(this->joint_right->GetScopedName(), 10.0);
+			this->model->GetJointController()->SetVelocityTarget(this->joint_right->GetScopedName(), 5.0);
     		}
 
 		private: physics::ModelPtr model;
