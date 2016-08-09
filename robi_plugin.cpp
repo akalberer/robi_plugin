@@ -10,6 +10,11 @@
 #include <string>
 #include <gazebo/transport/transport.hh>
 #include <gazebo/msgs/msgs.hh>
+#include <ros/ros.h>
+#include <ros/callback_queue.h>
+#include <ros/subscribe_options.h>
+#include <std_msgs/Float32.h>
+#include <thread>
 
 namespace gazebo
 {
@@ -85,6 +90,27 @@ namespace gazebo
 			// Subscribe to the topic, and register a callback
 			this->sub_left = this->node->Subscribe(topicNameLeft, &RobiPlugin::OnMsgLeft, this);
 			this->sub_right = this->node->Subscribe(topicNameRight, &RobiPlugin::OnMsgRight, this);
+
+			// Initialize ros, if it has not already bee initialized.
+			if (!ros::isInitialized())
+			{
+  				int argc = 0;
+  				char **argv = NULL;
+  				ros::init(argc, argv, "gazebo_client",
+      				ros::init_options::NoSigintHandler);
+			}
+
+			// Create our ROS node. This acts in a similar manner to the Gazebo node
+			this->rosNode.reset(new ros::NodeHandle("gazebo_client"));
+
+			// Create a named topic, and subscribe to it.
+			ros::SubscribeOptions so_left = ros::SubscribeOptions::create<std_msgs::Float32>("/" + this->model->GetName() + "/robi_cmd_left", 1, boost::bind(&RobiPlugin::OnRosMsgLeft, this, _1), ros::VoidPtr(), &this->rosQueue_left);
+			this->rosSub_left = this->rosNode->subscribe(so_left);
+			ros::SubscribeOptions so_right = ros::SubscribeOptions::create<std_msgs::Float32>("/" + this->model->GetName() + "/robi_cmd_right", 1, boost::bind(&RobiPlugin::OnRosMsgRight, this, _1), ros::VoidPtr(), &this->rosQueue_right);
+			this->rosSub_right = this->rosNode->subscribe(so_right);
+
+			// Spin up the queue helper thread.
+			this->rosQueueThread = std::thread(std::bind(&RobiPlugin::QueueThread, this));
     		}
 
 		/// \brief Set the velocity of the Robi
@@ -114,7 +140,7 @@ namespace gazebo
 		}
 
 		/// \brief Handle incoming message
-		/// \param[in] _msg Repurpose a vector3 message. This function will
+		/// \param[in] msg_left Repurpose a vector3 message. This function will
 		/// only use the x component.
 		private: void OnMsgLeft(ConstVector3dPtr &msg_left)
 		{
@@ -122,11 +148,36 @@ namespace gazebo
 		}
 
 		/// \brief Handle incoming message
-		/// \param[in] _msg Repurpose a vector3 message. This function will
+		/// \param[in] msg_right Repurpose a vector3 message. This function will
 		/// only use the x component.
 		private: void OnMsgRight(ConstVector3dPtr &msg_right)
 		{
 			this->SetVelocityRight(msg_right->x());
+		}
+
+		/// \brief Handle an incoming message from ROS
+		/// \param[in] msg A float value that is used to set the velocity of the left Robi wheel
+		public: void OnRosMsgLeft(const std_msgs::Float32ConstPtr &msg_left)
+		{
+			this->SetVelocityLeft(msg_left->data);
+		}
+
+		/// \brief Handle an incoming message from ROS
+		/// \param[in] msg A float value that is used to set the velocity of the left Robi wheel
+		public: void OnRosMsgRight(const std_msgs::Float32ConstPtr &msg_right)
+		{
+			this->SetVelocityRight(msg_right->data);
+		}
+
+		/// \brief ROS helper function that processes messages
+		private: void QueueThread()
+		{
+			static const double timeout = 0.01;
+			while (this->rosNode->ok())
+			{
+				this->rosQueue_left.callAvailable(ros::WallDuration(timeout));
+				this->rosQueue_right.callAvailable(ros::WallDuration(timeout));
+			}
 		}
 
 		private: physics::ModelPtr model;
@@ -140,6 +191,18 @@ namespace gazebo
 		/// \brief A subscriber to a named topic.
 		private: transport::SubscriberPtr sub_left;
 		private: transport::SubscriberPtr sub_right;
+		
+		// ROS variables		
+		/// \brief A node use for ROS transport
+		private: std::unique_ptr<ros::NodeHandle> rosNode;
+		/// \brief ROS subscriber
+		private: ros::Subscriber rosSub_left;
+		private: ros::Subscriber rosSub_right;
+		/// \brief ROS callbackqueue that helps process messages
+		private: ros::CallbackQueue rosQueue_left;
+		private: ros::CallbackQueue rosQueue_right;
+		/// \brief A thread the keeps running the rosQueue
+		private: std::thread rosQueueThread;
 
   	};
 
