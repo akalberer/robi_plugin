@@ -18,8 +18,8 @@
 
 			<!-- Attach the plugin to this model -->
 			<plugin name="robi_control" filename="librobi_plugin.so">
-				<velocity_left>5</velocity_left>
-				<velocity_right>5</velocity_right>
+				<velocity_left>0</velocity_left>
+				<velocity_right>0</velocity_right>
 			</plugin>
 		</model>
 	</world>

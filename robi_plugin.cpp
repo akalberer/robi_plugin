@@ -8,6 +8,8 @@
 #include <gazebo/physics/JointController.hh>
 #include <gazebo/physics/physics.hh>
 #include <string>
+#include <gazebo/transport/transport.hh>
+#include <gazebo/msgs/msgs.hh>
 
 namespace gazebo
 {
@@ -67,12 +69,65 @@ namespace gazebo
   			// Set the joint's target velocity. This target velocity is just
   			// for demonstration purposes.
 			std::cerr << "name joint: " << this->joint_left->GetScopedName() << std::endl;
-			//if(!this->joint_left->GetScopedName().compare(left_wheel_name)){
-				//std::cerr << "left found\n";
-			//}
+			
   			this->model->GetJointController()->SetVelocityTarget(this->joint_left->GetScopedName(), velocity_left);
 			this->model->GetJointController()->SetVelocityTarget(this->joint_right->GetScopedName(), velocity_right);
+
+			// Create the node
+			this->node = transport::NodePtr(new transport::Node());
+			this->node->Init(this->model->GetWorld()->GetName());
+
+			std::cerr << "model name: " << this->model->GetName() << "\n";
+			// Create topic names
+			std::string topicNameLeft = "~/" + this->model->GetName() + "/robi_cmd_left";
+			std::string topicNameRight = "~/" + this->model->GetName() + "/robi_cmd_right";
+
+			// Subscribe to the topic, and register a callback
+			this->sub_left = this->node->Subscribe(topicNameLeft, &RobiPlugin::OnMsgLeft, this);
+			this->sub_right = this->node->Subscribe(topicNameRight, &RobiPlugin::OnMsgRight, this);
     		}
+
+		/// \brief Set the velocity of the Robi
+		/// \param[in] vel_left New target velocity for left wheel
+		/// \param[in] vel_right New target velocity for right wheel
+		public: void SetVelocity(const double &vel_left, const double vel_right)
+		{
+			// Set the joint's target velocity.
+			this->model->GetJointController()->SetVelocityTarget(this->joint_left->GetScopedName(), vel_left);
+			this->model->GetJointController()->SetVelocityTarget(this->joint_right->GetScopedName(), vel_right);
+		}
+
+		/// \brief Set the velocity of the Robi
+		/// \param[in] vel_left New target velocity for left wheel
+		public: void SetVelocityLeft(const double &vel_left)
+		{
+			// Set the joint's target velocity.
+			this->model->GetJointController()->SetVelocityTarget(this->joint_left->GetScopedName(), vel_left);
+		}
+
+		/// \brief Set the velocity of the Robi
+		/// \param[in] vel_right New target velocity for right wheel
+		public: void SetVelocityRight(const double &vel_right)
+		{
+			// Set the joint's target velocity.
+			this->model->GetJointController()->SetVelocityTarget(this->joint_right->GetScopedName(), vel_right);
+		}
+
+		/// \brief Handle incoming message
+		/// \param[in] _msg Repurpose a vector3 message. This function will
+		/// only use the x component.
+		private: void OnMsgLeft(ConstVector3dPtr &msg_left)
+		{
+			this->SetVelocityLeft(msg_left->x());
+		}
+
+		/// \brief Handle incoming message
+		/// \param[in] _msg Repurpose a vector3 message. This function will
+		/// only use the x component.
+		private: void OnMsgRight(ConstVector3dPtr &msg_right)
+		{
+			this->SetVelocityRight(msg_right->x());
+		}
 
 		private: physics::ModelPtr model;
 		private: physics::JointPtr joint_left;
@@ -80,6 +135,12 @@ namespace gazebo
 		private: physics::JointPtr joint_right;
 		private: common::PID pid_right;
 		public: static const std::string left_wheel_name;
+		/// \brief A node used for transport
+		private: transport::NodePtr node;
+		/// \brief A subscriber to a named topic.
+		private: transport::SubscriberPtr sub_left;
+		private: transport::SubscriberPtr sub_right;
+
   	};
 
   	// Tell Gazebo about this plugin, so that Gazebo can call Load on this plugin.

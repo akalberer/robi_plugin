@@ -9,3 +9,15 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${GAZEBO_CXX_FLAGS}")
 # Build our plugin
 add_library(robi_plugin SHARED robi_plugin.cpp)
 target_link_libraries(robi_plugin ${GAZEBO_libraries})
+
+# Build the test program
+add_executable(vel_test vel_test.cpp)
+
+if (${gazebo_VERSION_MAJOR} LESS 6)
+  # These two
+  include(FindBoost)
+  find_package(Boost ${MIN_BOOST_VERSION} REQUIRED system filesystem regex)
+  target_link_libraries(vel_test ${GAZEBO_LIBRARIES} ${Boost_LIBRARIES})
+else()
+  target_link_libraries(vel_test ${GAZEBO_LIBRARIES})
+endif()
