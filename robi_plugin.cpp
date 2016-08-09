@@ -51,6 +51,15 @@ namespace gazebo
   			this->pid_left = common::PID(0.1, 0, 0);
   			this->pid_right = common::PID(0.1, 0, 0);
 
+			double velocity_left = 0;
+			double velocity_right = 0;
+			if(_sdf->HasElement("velocity_left")){
+				velocity_left = _sdf->Get<double>("velocity_left");
+			}
+			if(_sdf->HasElement("velocity_right")){
+				velocity_right = _sdf->Get<double>("velocity_right");
+			}
+
   			// Apply the P-controller to the joint.
   			this->model->GetJointController()->SetVelocityPID(this->joint_left->GetScopedName(), this->pid_left);
 			this->model->GetJointController()->SetVelocityPID(this->joint_right->GetScopedName(), this->pid_right);
@@ -61,8 +70,8 @@ namespace gazebo
 			//if(!this->joint_left->GetScopedName().compare(left_wheel_name)){
 				//std::cerr << "left found\n";
 			//}
-  			this->model->GetJointController()->SetVelocityTarget(this->joint_left->GetScopedName(), 10.0);
-			this->model->GetJointController()->SetVelocityTarget(this->joint_right->GetScopedName(), 5.0);
+  			this->model->GetJointController()->SetVelocityTarget(this->joint_left->GetScopedName(), velocity_left);
+			this->model->GetJointController()->SetVelocityTarget(this->joint_right->GetScopedName(), velocity_right);
     		}
 
 		private: physics::ModelPtr model;
