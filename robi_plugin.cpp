@@ -14,7 +14,10 @@
 #include <ros/callback_queue.h>
 #include <ros/subscribe_options.h>
 #include <std_msgs/Float32.h>
+#include <std_msgs/Float64.h>
+#include <geometry_msgs/Pose.h>
 #include <thread>
+#include <gazebo/math/Pose.hh>
 
 namespace gazebo
 {
@@ -109,6 +112,8 @@ namespace gazebo
 			ros::SubscribeOptions so_right = ros::SubscribeOptions::create<std_msgs::Float32>("/" + this->model->GetName() + "/robi_cmd_right", 1, boost::bind(&RobiPlugin::OnRosMsgRight, this, _1), ros::VoidPtr(), &this->rosQueue_right);
 			this->rosSub_right = this->rosNode->subscribe(so_right);
 
+			this->rosPub_pose_x = this->rosNode->advertise<std_msgs::Float64>("/" + this->model->GetName() + "/robi_pose/x", 1);
+			this->rosPub_pose_y = this->rosNode->advertise<std_msgs::Float64>("/" + this->model->GetName() + "/robi_pose/y", 1);
 			// Spin up the queue helper thread.
 			this->rosQueueThread = std::thread(std::bind(&RobiPlugin::QueueThread, this));
     		}
@@ -177,6 +182,13 @@ namespace gazebo
 			{
 				this->rosQueue_left.callAvailable(ros::WallDuration(timeout));
 				this->rosQueue_right.callAvailable(ros::WallDuration(timeout));
+				gazebo::math::Pose pose = this->model->GetWorldPose();
+				std_msgs::Float64 msg_x;
+				msg_x.data = pose.pos.x;
+				std_msgs::Float64 msg_y;
+				msg_y.data = pose.pos.y;
+				rosPub_pose_x.publish(msg_x);
+				rosPub_pose_y.publish(msg_y);
 			}
 		}
 
@@ -198,6 +210,8 @@ namespace gazebo
 		/// \brief ROS subscriber
 		private: ros::Subscriber rosSub_left;
 		private: ros::Subscriber rosSub_right;
+		private: ros::Publisher rosPub_pose_x;
+		private: ros::Publisher rosPub_pose_y;
 		/// \brief ROS callbackqueue that helps process messages
 		private: ros::CallbackQueue rosQueue_left;
 		private: ros::CallbackQueue rosQueue_right;
