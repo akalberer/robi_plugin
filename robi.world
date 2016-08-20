@@ -10,7 +10,7 @@
 			<uri>model://ground_plane</uri>
 		</include>
 
-		<!-- A testing model that includes the Velodyne sensor model -->
+		<!-- Load the Robi model -->
 		<model name="robi_model">
 			<include>
 				<uri>model://robi</uri>
